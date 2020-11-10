@@ -1,104 +1,175 @@
 import java.sql.*;
+import java.util.Map;
 
 public class DBManager {
 
-    public static void main(String[] args) {
+    private static final String FILE_NAME = "isit34_db.db";
+    private static final String LOCAL_PATH = "D:\\sqlite\\";
+    private static final String DB_URL = "jdbc:sqlite:" + LOCAL_PATH + FILE_NAME;
+    private static final String CREATE_URL_LIST = "create table if not exists urllist ( " +
+            "id integer primary key autoincrement," +
+            "url text not null" +
+            ");";
+    private static final String CREATE_WORD_LIST = "create table if not exists wordlist ( " +
+            "id integer primary key autoincrement," +
+            "word text not null," +
+            "isFiltered integer not null" +
+            ");";
+    private static final String CREATE_WORD_LOCATION = "create table if not exists wordlocation ( " +
+            "id integer primary key autoincrement," +
+            "wordid integer not null," +
+            "urlid integer not null," +
+            "location integer not null" +
+            ");";
+    private static final String CREATE_LINK_URL = "create table if not exists linkurl ( " +
+            "id integer primary key autoincrement," +
+            "fromurl integer not null," +
+            "tourl integer not null" +
+            ");";
+    private static final String CREATE_LINK_WORD = "create table if not exists linkword ( " +
+            "id integer primary key autoincrement," +
+            "wordid integer not null," +
+            "linkid integer not null" +
+            ");";
+    private static final String DROP_URL_LIST = "drop table if exists urllist;";
+    private static final String DROP_WORD_LIST = "drop table if exists wordlist;";
+    private static final String DROP_WORD_LOCATION = "drop table if exists wordlocation;";
+    private static final String DROP_LINK_URL = "drop table if exists linkurl;";
+    private static final String DROP_LINK_WORD = "drop table if exists linkword;";
 
-        String fileName = "java_SQLite.db"; // имя файла для хранения БД
-        String db_url = "jdbc:sqlite:" + fileName; // формируемая строка для подключения к локальному файлу
+    private static Connection conn;
 
+    public DBManager() {
         try {
-            Connection conn = DriverManager.getConnection(db_url); // открыть соединение с БД в локальном файле
-
-            /** conn.setAutoCommit(true | false);
-             *  Управление режимом AutoCommit БД, при включенном AutoCommit
-             *  после выполнения каждого запроса БД сама фиксирует (commit) изменения.
-             */
-            conn.setAutoCommit(true); // включить режим автоматической фиксации (commit) изменений БД
-
-
-            if (conn != null) {
-                // Если соединение открыто успешно
-                DatabaseMetaData meta = conn.getMetaData();
-                System.out.println("Используемый JDBC-драйвер: " + meta.getDriverName());
-                System.out.println("Файл " + fileName + " создан");
-
-                // Получить Statement для того, чтобы выполнить sql-запрос
-                Statement statement = conn.createStatement();
-
-
-                // Удаление прошлой версии таблицы из БД --------------------------------------------------------------
-
-                // сформировать SQL запрос
-                String sqlDropTable = "DROP TABLE IF EXISTS wordlist;";
-
-                // выполнить SQL запрос
-                statement.execute(sqlDropTable);
-                System.out.println("Таблица удалена.");
-
-
-                // Создания таблицы wordlist в БД ---------------------------------------------------------------------
-                // Сформировать SQL запрос
-                String sqlCreateTable = "CREATE TABLE IF NOT EXISTS wordlist ( \n "
-                        + "    rowid INTEGER PRIMARY KEY AUTOINCREMENT,  -- первичный ключ\n"
-                        + "    word TEXT NOT NULL, -- слово\n"
-                        + "    isFiltred INTEGER NOT NULL -- флаг фильтрации\n"
-                        + ");";
-
-                // Выполнить SQL запрос
-                statement.execute(sqlCreateTable);
-                System.out.println("Таблица создана.");
-
-
-                // Добавить строки. Способ 1. По одной записи  --------------------------------------------------------
-                statement.execute("INSERT INTO wordlist (word, isFiltred) VALUES ('Четверг', 0)");
-                statement.execute("INSERT INTO wordlist (word, isFiltred) VALUES ('Пятница', 0)");
-                System.out.println("Строки добавлены в таблицу.");
-
-                // Сохранить (commit) изменения в БД ------------------------------------------------------------------
-                //conn.commit(); // необходим только в режиме conn.setAutoCommit(false); иначе препятствует работе. (см. выше)
-
-
-                // Получение данных из БД и вывод в консоль ----------------------------------------------------------
-                System.out.println("\n===SQL=== 1. Получение данных из БД. Вывод всех элементов таблицы wordlist =========================================");
-                // Сформировать SQL запрос
-                String sqlSelect = "SELECT rowid, word, isFiltred FROM wordlist";
-                // Выполнить SQL запрос и созранить ответ
-                ResultSet resultRows = statement.executeQuery(sqlSelect);
-
-                // Обход каждого элемента в полученном объекте
-                while (resultRows.next()) {
-                    System.out.println(
-                            resultRows.getInt("rowid") + "\t" +
-                                    resultRows.getString("word") + "\t" +
-                                    resultRows.getInt("isFiltred"));
-                }
-
-
-                System.out.println("\n===SQL=== 2. Получение данных из БД. Запрос строк таблицы wordlist подходящих под условие ==========================");
-                String searchedWord = "Пятница";
-                // Сформировать SQL запрос
-                String sqlSelectCondition = String.format( "SELECT rowid, word, isFiltred FROM wordlist where word='%s'" , searchedWord);
-
-                System.out.println(sqlSelectCondition);
-                // Выполнить SQL запрос и созранить ответ
-                ResultSet resultRowsConditions = statement.executeQuery(sqlSelectCondition);
-
-
-                // Обход каждого элемента в полученном объекте
-                while (resultRowsConditions.next()) {
-                    System.out.println(
-                            resultRowsConditions.getInt("rowid") + "\t" +
-                                    resultRowsConditions.getString("word") + "\t" +
-                                    resultRowsConditions.getInt("isFiltred"));
-                }
-
-
-
-            }
-
+            conn = DriverManager.getConnection(DB_URL);
+            conn.setAutoCommit(true);
+            DatabaseMetaData meta = conn.getMetaData();
+            System.out.println("Используемый JDBC-драйвер: " + meta.getDriverName());
+            System.out.println("Файл " + FILE_NAME + " создан");
+            Statement statement = conn.createStatement();
+            recreateTables(statement);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    public ResultSet selectFiltered(String tableName, Map<String, Object> filter) {
+        try {
+            Statement statement = conn.createStatement();
+            StringBuilder request = new StringBuilder("select * from " + tableName + " where ");
+            for (String key : filter.keySet()) {
+                Object value = filter.get(key);
+                if (value instanceof String) {
+                    request.append(key).append("=").append("'").append(filter.get(key)).append("' and ");
+                } else {
+                    request.append(key).append("=").append(filter.get(key)).append(" and ");
+                }
+            }
+            request = new StringBuilder(request.substring(0, request.length() - 5));
+            request.append(";");
+            return statement.executeQuery(request.toString());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public ResultSet selectFrom(String tableName) {
+        try {
+            Statement statement = conn.createStatement();
+            String request = "select * from " + tableName + ";";
+            return statement.executeQuery(request);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public void addUrl(String url) {
+        Statement statement = null;
+        try {
+            statement = conn.createStatement();
+            statement.execute("INSERT INTO urllist (url) VALUES ('" + url + "');");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void addWord(String word, int isFiltered) {
+        Statement statement = null;
+        try {
+            statement = conn.createStatement();
+            statement.execute(
+                    "INSERT INTO wordlist (word, isFiltered) VALUES ('" + word + "'," + isFiltered + ");"
+            );
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void addWordLocation(int wordId, int urlId, int location) {
+        Statement statement = null;
+        try {
+            statement = conn.createStatement();
+            statement.execute(
+                    "INSERT INTO wordlocation (wordid, urlid, location) VALUES " +
+                            "(" + wordId + "," + urlId + "," + location + ");"
+            );
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void addLinkBetweenUrl(int fromUrl, int toUrl) {
+        Statement statement = null;
+        try {
+            statement = conn.createStatement();
+            statement.execute(
+                    "INSERT INTO linkurl (fromurl, tourl) VALUES " +
+                            "(" + fromUrl + "," + toUrl + ");"
+            );
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void addWordLink(int wordId, int linkId) {
+        Statement statement = null;
+        try {
+            statement = conn.createStatement();
+            statement.execute(
+                    "INSERT INTO linkword (wordid, linkid) VALUES " +
+                            "(" + wordId + "," + linkId + ");"
+            );
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void dropTables(Statement statement) {
+        try {
+            statement.execute(DROP_URL_LIST);
+            statement.execute(DROP_WORD_LIST);
+            statement.execute(DROP_WORD_LOCATION);
+            statement.execute(DROP_LINK_URL);
+            statement.execute(DROP_LINK_WORD);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Таблица удалена.");
+    }
+
+    private static void recreateTables(Statement statement) {
+        dropTables(statement);
+        try {
+            statement.execute(CREATE_URL_LIST);
+            statement.execute(CREATE_WORD_LIST);
+            statement.execute(CREATE_WORD_LOCATION);
+            statement.execute(CREATE_LINK_URL);
+            statement.execute(CREATE_LINK_WORD);
+            System.out.println("Таблица создана.");
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 }
