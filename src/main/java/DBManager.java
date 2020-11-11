@@ -3,6 +3,11 @@ import java.util.Map;
 
 public class DBManager {
 
+    static final String DB_URL_LIST="urllist";
+    static final String DB_WORD_LIST="wordlist";
+    static final String DB_LOCATION="wordlocation";
+    static final String DB_LINK="linkurl";
+    static final String DB_LINK_WORD="linkword";
     private static final String FILE_NAME = "isit34_db";
     private static final String LOCAL_PATH = "D:\\sqlite\\";
     private static final String DB_URL = "jdbc:sqlite:" + LOCAL_PATH + FILE_NAME;
