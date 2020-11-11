@@ -24,7 +24,8 @@ public class DBManager {
     private static final String CREATE_LINK_URL = "create table if not exists linkurl ( " +
             "id integer primary key autoincrement," +
             "fromurl integer not null," +
-            "tourl integer not null" +
+            "tourl integer not null," +
+            "content text not null" +
             ");";
     private static final String CREATE_LINK_WORD = "create table if not exists linkword ( " +
             "id integer primary key autoincrement," +
@@ -120,13 +121,12 @@ public class DBManager {
         }
     }
 
-    public void addLinkBetweenUrl(int fromUrl, int toUrl) {
-        Statement statement = null;
+    public void addLinkBetweenUrl(int fromUrl, int toUrl, String content) {
         try {
-            statement = conn.createStatement();
+            Statement statement = conn.createStatement();
             statement.execute(
-                    "INSERT INTO linkurl (fromurl, tourl) VALUES " +
-                            "(" + fromUrl + "," + toUrl + ");"
+                    "INSERT INTO linkurl (fromurl, tourl, content) VALUES " +
+                            "(" + fromUrl + "," + toUrl + ",'" + content + "');"
             );
         } catch (SQLException e) {
             e.printStackTrace();
