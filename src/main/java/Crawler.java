@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class Crawler {
 
@@ -23,16 +22,25 @@ public class Crawler {
         crawl(start, 2);
     }
 
-    public static boolean addToIndex(String url, Document html) {
-        return true;
+    public static void addToIndex(String url, Document html) throws SQLException {
+        if (!isIndexed(url)) return;
+        String[] words = separateWords(getTextOnly(html));
+        int urlId = getEntityId("urllist", "url", url, true);
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i];
+            if (!isIgnored(word)) {
+                int wordId = getEntityId("wordlist", "word", word, true);
+                db.addWordLocation(wordId, urlId, i);
+            }
+        }
     }
 
-    public static String getTextOnly(String text) {
-        return "";
+    public static String getTextOnly(Document doc) {
+        return doc.body().text();
     }
 
-    public static void separateWords(String text) {
-
+    public static String[] separateWords(String text) {
+        return text.split(" ");
     }
 
     public static boolean isIndexed(String url) throws SQLException {
@@ -49,9 +57,14 @@ public class Crawler {
     }
 
     public static void addLinkRef(String from, String to, String link) throws SQLException {
-        int fromId = getEntryId("urllist", "url", from, false);
-        int toId = getEntryId("urllist", "url", to, false);
-        db.addLinkBetweenUrl(fromId, toId, link);
+        int fromId = getEntityId("urllist", "url", from, false);
+        int toId = getEntityId("urllist", "url", to, false);
+        int linkId = getEntityId("linkurl", "fromurl", fromId, "tourl", toId, true);
+        String[] words = separateWords(link);
+        for(String word:words){
+            int wordId = getEntityId("wordlist", "word", word, true);
+            db.addWordLink(wordId, linkId);
+        }
     }
 
     public static void crawl(ArrayList<String> pages, int depth) throws IOException, SQLException {
@@ -93,12 +106,35 @@ public class Crawler {
         }*/
     }
 
-    public static int getEntryId(String table, String field, String value, boolean createNew) throws SQLException {
+    public static int getEntityId(String table, String field, String value, boolean createNew) throws SQLException {
         HashMap<String, Object> filter = new HashMap<String, Object>();
         filter.put(field, value);
         ResultSet savedLink = db.selectFiltered(table, filter);
         if (savedLink.next()) {
             return savedLink.getInt("id");
+        }
+        if (createNew) {
+            if (table.equals("urllist")) {
+                db.addUrl(value);
+            } else {
+                db.addWord(value, 0);
+            }
+            return getEntityId(table, field, value, false);
+        }
+        return -1;
+    }
+
+    public static int getEntityId(String table, String field1, int value1, String field2, int value2, boolean createNew) throws SQLException {
+        HashMap<String, Object> filter = new HashMap<String, Object>();
+        filter.put(field1, value1);
+        filter.put(field2, value2);
+        ResultSet savedLink = db.selectFiltered(table, filter);
+        if (savedLink.next()) {
+            return savedLink.getInt("id");
+        }
+        if (createNew) {
+            db.addLinkBetweenUrl(value1, value2);
+            return getEntityId(table, field1, value1, field2, value2, false);
         }
         return -1;
     }
@@ -108,5 +144,12 @@ public class Crawler {
             if (Character.isLetter(linkText.charAt(i))) return true;
         }
         return !linkText.contains("https") && !linkText.equals("");
+    }
+
+    private static boolean isIgnored(String word) {
+        for (String ignoreWord : ignoreWords) {
+            if (word.equals(ignoreWord)) return true;
+        }
+        return false;
     }
 }

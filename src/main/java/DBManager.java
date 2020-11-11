@@ -3,7 +3,7 @@ import java.util.Map;
 
 public class DBManager {
 
-    private static final String FILE_NAME = "isit34_db.db";
+    private static final String FILE_NAME = "isit34_db";
     private static final String LOCAL_PATH = "D:\\sqlite\\";
     private static final String DB_URL = "jdbc:sqlite:" + LOCAL_PATH + FILE_NAME;
     private static final String CREATE_URL_LIST = "create table if not exists urllist ( " +
@@ -24,8 +24,7 @@ public class DBManager {
     private static final String CREATE_LINK_URL = "create table if not exists linkurl ( " +
             "id integer primary key autoincrement," +
             "fromurl integer not null," +
-            "tourl integer not null," +
-            "content text not null" +
+            "tourl integer not null" +
             ");";
     private static final String CREATE_LINK_WORD = "create table if not exists linkword ( " +
             "id integer primary key autoincrement," +
@@ -121,12 +120,12 @@ public class DBManager {
         }
     }
 
-    public void addLinkBetweenUrl(int fromUrl, int toUrl, String content) {
+    public void addLinkBetweenUrl(int fromUrl, int toUrl) {
         try {
             Statement statement = conn.createStatement();
             statement.execute(
-                    "INSERT INTO linkurl (fromurl, tourl, content) VALUES " +
-                            "(" + fromUrl + "," + toUrl + ",'" + content + "');"
+                    "INSERT INTO linkurl (fromurl, tourl) VALUES " +
+                            "(" + fromUrl + "," + toUrl + ");"
             );
         } catch (SQLException e) {
             e.printStackTrace();
